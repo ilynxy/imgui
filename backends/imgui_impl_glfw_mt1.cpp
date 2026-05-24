@@ -154,14 +154,14 @@ struct ImGui_ImplGlfw_MT_Data
 ///    WNDPROC                 PrevWndProc;
 ///#endif
 ///
-///#if GLFW_HAS_X11
-///    // Module and function pointers loaded at initialization to avoid linking statically with X11.
-///    void*                       X11Module;
-///    PFN_XInternAtom             XInternAtom;
-///    PFN_XChangeProperty         XChangeProperty;
-///    PFN_XChangeWindowAttributes XChangeWindowAttributes;
-///    PFN_XFlush                  XFlush;
-///#endif
+#if GLFW_HAS_X11
+    // Module and function pointers loaded at initialization to avoid linking statically with X11.
+    void*                       X11Module;
+    PFN_XInternAtom             XInternAtom;
+    PFN_XChangeProperty         XChangeProperty;
+    PFN_XChangeWindowAttributes XChangeWindowAttributes;
+    PFN_XFlush                  XFlush;
+#endif
 
     ImGui_ImplGlfw_MT_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -561,6 +561,21 @@ void ImGui_ImplGlfw_MT_CursorPosCallback(GLFWwindow* window, double x, double y)
     }
     io.AddMousePosEvent((float)x, (float)y);
     bd->LastValidMousePos = ImVec2((float)x, (float)y);
+}
+
+void ImGui_ImplGlfw_MT_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+{
+  ImGui_ImplGlfw_MT_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
+///  if (bd->PrevUserCallbackScroll != nullptr && ImGui_ImplGlfw_ShouldChainCallback(bd, window))
+///      bd->PrevUserCallbackScroll(window, xoffset, yoffset);
+
+#ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
+  // Ignore GLFW events: will be processed in ImGui_ImplEmscripten_WheelCallback().
+  return;
+#endif
+
+  ImGuiIO& io = ImGui::GetIO(bd->Context);
+  io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
 }
 
 void ImGui_ImplGlfw_MT_WindowSizeCallback(GLFWwindow* window, int width, int height)
