@@ -129,6 +129,8 @@ struct ImGui_ImplGlfw_MT_Data
 
     int                     window_width;
     int                     window_height;
+    float                   window_xscale;
+    float                   window_yscale;
     int                     framebuffer_width;
     int                     framebuffer_height;
 
@@ -284,6 +286,14 @@ static void ImGui_ImplGlfw_GetWindowSizeAndFramebufferScale(ImGui_ImplGlfw_MT_Da
       *out_framebuffer_scale = ImVec2(fb_scale_x, fb_scale_y);
 }
 
+static float ImGui_ImplGlfw_GetWindowDpiScale(ImGuiViewport* viewport)
+{
+  GLFWwindow* window = (GLFWwindow*)viewport->PlatformHandle;
+  ImGui_ImplGlfw_MT_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
+  return (bd->window_xscale + bd->window_yscale) / 2;
+}
+
+
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool /*install_callbacks*/, GlfwClientApi client_api)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -328,6 +338,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool /*install_callbacks*/, 
 #else
     platform_io.Platform_SetClipboardTextFn = [](ImGuiContext*, const char* text) { glfwSetClipboardString(nullptr, text); };
     platform_io.Platform_GetClipboardTextFn = [](ImGuiContext*) { return glfwGetClipboardString(nullptr); };
+    platform_io.Platform_GetWindowDpiScale  = ImGui_ImplGlfw_GetWindowDpiScale;
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -374,6 +385,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool /*install_callbacks*/, 
     ImGui_ImplGlfw_InitWindowSizeAndFramebufferScale(bd);
     ImGui_ImplGlfw_GetWindowSizeAndFramebufferScale(
           bd, &io.DisplaySize, &io.DisplayFramebufferScale);
+    glfwGetWindowContentScale(window, &bd->window_xscale, &bd->window_yscale);
 
     // Set platform dependent data in viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -435,6 +447,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool /*install_callbacks*/, 
 #endif
 
     bd->ClientApi = client_api;
+
+
+
     return true;
 }
 
@@ -592,10 +607,11 @@ void ImGui_ImplGlfw_MT_FramebufferSizeCallback(GLFWwindow* window, int width, in
   bd->framebuffer_height = height;
 }
 
-void ImGui_ImplGlfw_MT_WindowContentScaleCallback(GLFWwindow* /*window*/, float xscale, float yscale)
+void ImGui_ImplGlfw_MT_WindowContentScaleCallback(GLFWwindow* window, float xscale, float yscale)
 {
-  auto vp = ImGui::GetMainViewport();
-  vp->DpiScale = (xscale + yscale) / 2;
+  ImGui_ImplGlfw_MT_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
+  bd->window_xscale = xscale;
+  bd->window_yscale = yscale;
 }
 
 #endif // #ifndef IMGUI_DISABLE
